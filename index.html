@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Bilderrahmen">
+<meta name="theme-color" content="#121110">
+<title>Bilderrahmen</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;500&display=swap">
+<style>
+/* Layout: eine ruhige Einstellungsspalte wie ein Passepartout; die Diashow nimmt den ganzen Bildschirm ein.
+   Bewusst nur dunkel: der Rahmen hängt oft abends im Wohnzimmer. Ohne flex-gap, damit Safari auf iOS 12 alles korrekt anzeigt. */
+:root{
+  --bg:#121110;
+  --panel:#1b1917;
+  --line:#2f2b27;
+  --fg:#ece6dc;
+  --muted:#9b9388;
+  --accent:#d2a862;
+  --accent-ink:#1a1408;
+  --danger:#e07a64;
+  --display:"Jost","Avenir Next","Helvetica Neue",sans-serif;
+  --body:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+a{color:var(--accent)}
+button,input,select{font:inherit;color:inherit}
+
+/* ---------- Einstellungsseiten ---------- */
+.page{min-height:100%;padding-left:16px;padding-right:16px;padding-top:calc(28px + env(safe-area-inset-top));padding-bottom:calc(48px + env(safe-area-inset-bottom))}
+.col{max-width:640px;margin:0 auto}
+.brand{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:28px}
+.brand h1{font-family:var(--display);font-weight:300;font-size:34px;letter-spacing:.02em;margin:0;line-height:1.1}
+.brand .who{color:var(--muted);font-size:13px;text-align:right;margin-left:12px}
+h2{font-family:var(--display);font-weight:500;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:36px 0 12px}
+p{margin:0 0 12px}
+.lead{font-size:17px;color:var(--fg)}
+.muted{color:var(--muted);font-size:14px}
+ol.steps{padding-left:22px;margin:0 0 20px}
+ol.steps li{margin-bottom:12px}
+code,.mono{font-family:"SF Mono",Menlo,monospace;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px;word-break:break-all}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 16px}
+.row{display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:8px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row > label,.row > .lbl{flex:1;min-width:0;padding-right:12px}
+.row small{display:block;color:var(--muted);font-size:13px;line-height:1.35}
+.stack > * + *{margin-top:10px}
+.inline > * + *{margin-left:8px}
+
+select,input[type=text],input[type=number],input[type=time]{
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:40px;max-width:100%;
+  -webkit-appearance:none;appearance:none;
+}
+select{padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+input[type=number]{width:76px;text-align:right}
+input.wide{width:100%}
+input:focus,select:focus,button:focus{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Schalter */
+input.sw{-webkit-appearance:none;appearance:none;width:50px;height:30px;border-radius:15px;background:var(--line);position:relative;flex:none;cursor:pointer;margin:0;transition:background .2s}
+input.sw:after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--fg);transition:transform .2s}
+input.sw:checked{background:var(--accent)}
+input.sw:checked:after{transform:translateX(20px);background:var(--accent-ink)}
+
+.btn{display:inline-block;border:0;border-radius:10px;padding:12px 18px;min-height:48px;background:var(--line);cursor:pointer;text-decoration:none;color:var(--fg)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.big{width:100%;font-size:18px;padding:16px}
+.btn.small{min-height:36px;padding:7px 12px;font-size:14px}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
+
+.msg{border-radius:8px;padding:10px 12px;margin:12px 0;font-size:15px;background:var(--panel);border:1px solid var(--line)}
+.msg.err{border-color:var(--danger);color:var(--danger)}
+
+/* Ordnerliste */
+.folders{max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.folder{display:flex;align-items:center;min-height:48px;padding:6px 0;border-top:1px solid var(--line);cursor:pointer}
+.folder:first-child{border-top:0}
+.folder input{width:22px;height:22px;margin:0 14px 0 0;accent-color:var(--accent);flex:none}
+.folder span{flex:1;min-width:0;word-break:break-word}
+.folders .empty{padding:16px 0;color:var(--muted)}
+.copyrow{display:flex;align-items:center}
+.copyrow input{flex:1;min-width:0;margin-right:8px}
+
+/* ---------- Diashow ---------- */
+#show{position:fixed;top:0;left:0;right:0;bottom:0;background:#000;overflow:hidden;-webkit-user-select:none;user-select:none;cursor:none}
+.layer{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;overflow:hidden;background:#000}
+.layer img{position:absolute;top:0;left:0;width:100%;height:100%}
+.layer .bg{display:none;top:-6%;left:-6%;width:112%;height:112%;object-fit:cover;filter:blur(30px) brightness(.5);-webkit-transform:translateZ(0);transform:translateZ(0)}
+.layer.fit-blur .bg{display:block}
+.stage{position:absolute;top:0;left:0;width:100%;height:100%}
+.fit-blur .fg,.fit-contain .fg{object-fit:contain}
+.fit-cover .fg{object-fit:cover}
+.stage.kb{animation-name:kb;animation-timing-function:linear;animation-fill-mode:forwards}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.14)}}
+
+#info{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 calc(4vmin + env(safe-area-inset-right)) calc(3.5vmin + env(safe-area-inset-bottom)) calc(4vmin + env(safe-area-inset-left));
+  color:#f4efe6;text-shadow:0 1px 3px rgba(0,0,0,.7),0 0 18px rgba(0,0,0,.45);pointer-events:none}
+#clock{font-family:var(--display);font-weight:200;line-height:1}
+#time{display:block;font-size:9vmin;letter-spacing:.01em}
+#today{display:block;font-size:2.4vmin;font-weight:300;letter-spacing:.08em;margin-top:.8vmin;text-transform:uppercase}
+#cap{text-align:right;font-family:var(--display);font-weight:300;font-size:2.3vmin;letter-spacing:.06em;max-width:50%}
+#cap span{display:block}
+#capFolder{text-transform:uppercase;letter-spacing:.12em}
+#status{position:absolute;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:6;background:rgba(18,17,16,.82);color:var(--fg);border-radius:20px;padding:8px 16px;font-size:15px;max-width:90%;text-align:center}
+#bar{position:absolute;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:7;display:flex;
+  background:rgba(27,25,23,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:6px;cursor:default}
+#bar button{width:64px;height:56px;border:0;background:transparent;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--fg)}
+#bar button + button{margin-left:4px}
+#bar button:active{background:rgba(255,255,255,.12)}
+#bar svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#bar svg .fill{fill:currentColor;stroke:none}
+#night{position:absolute;top:0;left:0;right:0;bottom:0;background:#000;z-index:9}
+@media (prefers-reduced-motion:reduce){.stage.kb{animation:none}}
+</style>
+</head>
+<body>
+
+<!-- 1. Einrichtung -->
+<section id="setup" class="page" hidden>
+ <div class="col">
+  <div class="brand"><h1>Bilderrahmen</h1></div>
+  <p class="lead">Einmalige Einrichtung. Damit die Seite deine Dropbox lesen darf, legst du bei Dropbox eine eigene kleine App an. Das ist kostenlos und dauert etwa fünf Minuten.</p>
+  <ol class="steps">
+   <li>Öffne <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener">dropbox.com/developers/apps</a> und tippe auf <b>Create app</b>. Wähle <b>Scoped access</b>, dann <b>App folder</b>, und gib als Namen z.&nbsp;B. <b>Bilderrahmen</b> ein.</li>
+   <li>Im Reiter <b>Permissions</b> die Häkchen bei <code>files.metadata.read</code> und <code>files.content.read</code> setzen und unten auf <b>Submit</b> tippen.</li>
+   <li>Im Reiter <b>Settings</b> unter <b>OAuth 2 → Redirect URIs</b> genau diese Adresse eintragen und auf <b>Add</b> tippen:
+     <div class="copyrow" style="margin-top:8px"><input type="text" id="redirectUri" readonly><button class="btn small" id="copyUri" type="button">Kopieren</button></div>
+     <small class="muted">„Allow public clients“ muss auf <b>Allow</b> stehen (Standard).</small></li>
+   <li>Den <b>App key</b> aus dem Reiter Settings hier eintragen:</li>
+  </ol>
+  <div class="stack">
+   <input type="text" id="appKeyInput" class="wide" placeholder="App key, z. B. a1b2c3d4e5f6g7h" autocapitalize="off" autocorrect="off" spellcheck="false">
+   <button class="btn primary big" id="saveKey" type="button">Weiter</button>
+  </div>
+  <div id="setupMsg" class="msg err" hidden></div>
+ </div>
+</section>
+
+<!-- 2. Verbinden -->
+<section id="connect" class="page" hidden>
+ <div class="col">
+  <div class="brand"><h1>Bilderrahmen</h1></div>
+  <p class="lead">Melde dich einmal bei Dropbox an. Die Seite bekommt nur Zugriff auf ihren eigenen App-Ordner, nichts wird öffentlich geteilt.</p>
+  <div id="connectMsg" class="msg err" hidden></div>
+  <button class="btn primary big" id="connectBtn" type="button">Mit Dropbox verbinden</button>
+
+  <h2>Als App vom Home-Bildschirm</h2>
+  <p class="muted">Wenn du die Seite als Symbol auf dem Home-Bildschirm nutzt, springt die Anmeldung manchmal nicht zurück. Dann so:</p>
+  <ol class="steps">
+   <li><a id="manualLink" href="#" target="_blank" rel="noopener">Code bei Dropbox holen</a>, anmelden und den angezeigten Code kopieren.</li>
+   <li>Hierher zurückkehren und den Code einfügen:</li>
+  </ol>
+  <div class="stack">
+   <input type="text" id="codeInput" class="wide" placeholder="Code von Dropbox" autocapitalize="off" autocorrect="off" spellcheck="false">
+   <button class="btn" id="codeBtn" type="button">Code bestätigen</button>
+  </div>
+  <p class="muted" style="margin-top:28px"><button class="linkbtn" id="changeKey" type="button">App key ändern</button></p>
+ </div>
+</section>
+
+<!-- 3. Einstellungen -->
+<section id="settings" class="page" hidden>
+ <div class="col">
+  <div class="brand"><h1>Bilderrahmen</h1><div class="who" id="who"></div></div>
+
+  <button class="btn primary big" id="startBtn" type="button">Diashow starten</button>
+  <div id="settingsMsg" class="msg err" hidden></div>
+
+  <h2>Ordner</h2>
+  <div class="card">
+   <div class="row" style="display:block">
+    <label for="base">Überordner<small>Leer lassen = der App-Ordner selbst (Dropbox/Apps/Bilderrahmen). Sonst z.&nbsp;B. <code>/Urlaub</code> innerhalb davon.</small></label>
+    <div class="copyrow" style="margin-top:8px"><input type="text" id="base" placeholder="(App-Ordner)" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn small" id="loadFolders" type="button">Laden</button></div>
+   </div>
+   <div class="row">
+    <div class="lbl">Unterordner auswählen<small id="folderHint">Werden geladen …</small></div>
+    <div class="inline" style="white-space:nowrap"><button class="btn small ghost" id="selAll" type="button">Alle</button><button class="btn small ghost" id="selNone" type="button">Keine</button></div>
+   </div>
+   <div class="folders" id="folderList"></div>
+   <div class="row"><label for="rootFiles">Auch Fotos direkt im Überordner<small>Bilder, die in keinem Unterordner liegen</small></label><input type="checkbox" class="sw" id="rootFiles"></div>
+   <div class="row"><label for="includeSub">Tiefere Ebenen einbeziehen<small>Auch Ordner innerhalb der gewählten Unterordner</small></label><input type="checkbox" class="sw" id="includeSub"></div>
+  </div>
+
+  <h2>Reihenfolge</h2>
+  <div class="card">
+   <div class="row"><label for="mode">Zwischen Ordnern<small id="modeHint"></small></label>
+    <select id="mode"><option value="folder">Erst einen Ordner fertig</option><option value="chunk">Nach einigen Fotos wechseln</option><option value="mix">Alles gemischt</option></select></div>
+   <div class="row" id="chunkRow"><label for="chunk">Fotos pro Ordner, dann wechseln</label><input type="number" id="chunk" min="1" max="99" inputmode="numeric"></div>
+   <div class="row" id="folderOrderRow"><label for="folderOrder">Ordner-Reihenfolge</label>
+    <select id="folderOrder"><option value="name">Nach Name</option><option value="shuffle">Zufällig</option></select></div>
+   <div class="row" id="withinRow"><label for="within">Fotos im Ordner</label>
+    <select id="within"><option value="shuffle">Zufällig</option><option value="name">Nach Dateiname</option><option value="date">Nach Datum, älteste zuerst</option><option value="date-desc">Nach Datum, neueste zuerst</option></select></div>
+  </div>
+
+  <h2>Anzeige</h2>
+  <div class="card">
+   <div class="row"><label for="interval">Jedes Foto zeigen</label>
+    <select id="interval"><option value="5">5 Sekunden</option><option value="10">10 Sekunden</option><option value="15">15 Sekunden</option><option value="30">30 Sekunden</option><option value="60">1 Minute</option><option value="120">2 Minuten</option><option value="300">5 Minuten</option><option value="600">10 Minuten</option><option value="1800">30 Minuten</option></select></div>
+   <div class="row"><label for="fit">Bildausschnitt<small>„Ganz zeigen“ lässt Hochformate vollständig sichtbar</small></label>
+    <select id="fit"><option value="blur">Ganz zeigen, unscharfer Rand</option><option value="contain">Ganz zeigen, schwarzer Rand</option><option value="cover">Bildschirm füllen (beschneidet)</option></select></div>
+   <div class="row"><label for="transition">Übergang</label>
+    <select id="transition"><option value="fade">Überblenden</option><option value="none">Harter Schnitt</option></select></div>
+   <div class="row"><label for="kenburns">Langsamer Zoom<small>Ken-Burns-Effekt, braucht etwas mehr Rechenleistung</small></label><input type="checkbox" class="sw" id="kenburns"></div>
+   <div class="row"><label for="quality">Bildqualität<small>„Sparsam“ lädt schneller und schont ältere iPads</small></label>
+    <select id="quality"><option value="w2048h1536">Hoch</option><option value="w1024h768">Sparsam</option></select></div>
+  </div>
+
+  <h2>Einblendungen</h2>
+  <div class="card">
+   <div class="row"><label for="showClock">Uhrzeit</label><input type="checkbox" class="sw" id="showClock"></div>
+   <div class="row"><label for="showToday">Heutiges Datum</label><input type="checkbox" class="sw" id="showToday"></div>
+   <div class="row"><label for="showFolder">Ordnername</label><input type="checkbox" class="sw" id="showFolder"></div>
+   <div class="row"><label for="showDate">Monat und Jahr des Fotos<small>Aus dem Dateidatum in Dropbox</small></label><input type="checkbox" class="sw" id="showDate"></div>
+  </div>
+
+  <h2>Nachtruhe</h2>
+  <div class="card">
+   <div class="row"><label for="nightOn">Nachts schwarzer Bildschirm<small>Lädt in dieser Zeit keine Fotos</small></label><input type="checkbox" class="sw" id="nightOn"></div>
+   <div class="row" id="nightRow"><div class="lbl">Von – bis</div><div class="inline" style="white-space:nowrap"><input type="time" id="nightFrom"><input type="time" id="nightTo"></div></div>
+  </div>
+
+  <h2>Start und Aktualisierung</h2>
+  <div class="card">
+   <div class="row"><label for="autostart">Diashow beim Öffnen sofort starten</label><input type="checkbox" class="sw" id="autostart"></div>
+   <div class="row"><label for="refreshHours">Nach neuen Fotos suchen</label>
+    <select id="refreshHours"><option value="1">Stündlich</option><option value="6">Alle 6 Stunden</option><option value="24">Täglich</option></select></div>
+  </div>
+
+  <h2>Tipps für den Dauerbetrieb</h2>
+  <p class="muted">Am iPad unter <b>Einstellungen → Anzeige &amp; Helligkeit → Automatische Sperre</b> „Nie“ wählen, sonst geht der Bildschirm aus. In Safari über das Teilen-Symbol „Zum Home-Bildschirm“ hinzufügen, dann läuft die Diashow ohne Adressleiste.</p>
+  <p class="muted">In der Diashow: links tippen = zurück, rechts tippen = weiter, Mitte = Bedienleiste.</p>
+
+  <h2>Verbindung</h2>
+  <div class="inline"><button class="btn ghost" id="logout" type="button">Von Dropbox abmelden</button></div>
+ </div>
+</section>
+
+<!-- 4. Diashow -->
+<section id="show" hidden>
+ <div class="layer" id="L0"><img class="bg" alt=""><div class="stage"><img class="fg" alt=""></div></div>
+ <div class="layer" id="L1"><img class="bg" alt=""><div class="stage"><img class="fg" alt=""></div></div>
+ <div id="info"><div id="clock"><span id="time"></span><span id="today"></span></div><div id="cap"><span id="capFolder"></span><span id="capDate"></span></div></div>
+ <div id="status" hidden></div>
+ <div id="bar" hidden>
+  <button id="bPrev" type="button" aria-label="Vorheriges Foto"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button id="bPause" type="button" aria-label="Pause"><svg viewBox="0 0 24 24" id="iPause"><rect class="fill" x="6.5" y="5" width="3.5" height="14" rx="1"/><rect class="fill" x="14" y="5" width="3.5" height="14" rx="1"/></svg><svg viewBox="0 0 24 24" id="iPlay" style="display:none"><path class="fill" d="M8 5.5v13l10.5-6.5z"/></svg></button>
+  <button id="bNext" type="button" aria-label="Nächstes Foto"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button id="bSettings" type="button" aria-label="Einstellungen"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+ </div>
+ <div id="night" hidden></div>
+</section>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Grundlagen ---------- */
+var API = 'https://api.dropboxapi.com/2/';
+var CONTENT = 'https://content.dropboxapi.com/2/';
+var TOKEN_URL = 'https://api.dropboxapi.com/oauth2/token';
+var REDIRECT = location.origin + location.pathname;
+var IMG = /\.(jpe?g|png|heic|heif|gif|webp|tiff?|bmp)$/i;
+
+var DEFAULTS = {
+  base:'', folders:[], rootFiles:false, includeSub:true,
+  mode:'chunk', chunk:5, folderOrder:'shuffle', within:'shuffle',
+  interval:30, fit:'blur', transition:'fade', kenburns:false, quality:'w2048h1536',
+  showClock:true, showToday:false, showFolder:true, showDate:true,
+  nightOn:false, nightFrom:'22:30', nightTo:'07:00',
+  autostart:true, refreshHours:6
+};
+
+function $(id){ return document.getElementById(id); }
+function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function drop(k){ try{ localStorage.removeItem(k); }catch(e){} }
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function mkErr(kind, text){ var e = new Error(text); e.kind = kind; return e; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function byName(a,b){ return a.name.localeCompare(b.name,'de',{numeric:true,sensitivity:'base'}); }
+
+var cfg = Object.assign({}, DEFAULTS, load('pf.cfg', {}));
+var appKey = load('pf.appkey', '');
+var auth = load('pf.auth', null);
+
+function screen(name){
+  ['setup','connect','settings','show'].forEach(function(s){ $(s).hidden = (s !== name); });
+  window.scrollTo(0,0);
+}
+function showMsg(id, text){ var el=$(id); el.textContent = text || ''; el.hidden = !text; }
+
+/* ---------- Anmeldung (OAuth mit PKCE, ohne Server) ---------- */
+function b64url(bytes){
+  var s=''; for(var i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function randBytes(n){ var a=new Uint8Array(n); crypto.getRandomValues(a); return a; }
+async function makePkce(){
+  var v = b64url(randBytes(48)), ch = v, m = 'plain';
+  try{
+    if(window.crypto && crypto.subtle && window.TextEncoder){
+      var d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+      ch = b64url(new Uint8Array(d)); m = 'S256';
+    }
+  }catch(e){}
+  var pk = {v:v, ch:ch, m:m, s:b64url(randBytes(16))};
+  save('pf.pkce', pk);
+  return pk;
+}
+function authUrl(pk, withRedirect){
+  var p = new URLSearchParams({client_id:appKey, response_type:'code', code_challenge:pk.ch,
+    code_challenge_method:pk.m, token_access_type:'offline'});
+  if(withRedirect){ p.set('redirect_uri', REDIRECT); p.set('state', pk.s); }
+  return 'https://www.dropbox.com/oauth2/authorize?' + p.toString();
+}
+async function exchange(code, withRedirect){
+  var pk = load('pf.pkce', null);
+  if(!pk) throw mkErr('auth','Die Anmeldung ist abgelaufen. Bitte noch einmal verbinden.');
+  var p = new URLSearchParams({code:code.trim(), grant_type:'authorization_code', code_verifier:pk.v, client_id:appKey});
+  if(withRedirect) p.set('redirect_uri', REDIRECT);
+  var r;
+  try{ r = await fetch(TOKEN_URL, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString()}); }
+  catch(e){ throw mkErr('net','Keine Verbindung zu Dropbox.'); }
+  var j = {}; try{ j = await r.json(); }catch(e){}
+  if(!r.ok || !j.refresh_token){
+    throw mkErr('auth', 'Dropbox hat die Anmeldung abgelehnt' + (j.error_description ? ': ' + j.error_description : '.') + ' Prüfe App key und Redirect URI.');
+  }
+  auth = {refresh:j.refresh_token, access:j.access_token, exp:Date.now() + (j.expires_in||3600)*1000};
+  save('pf.auth', auth);
+  drop('pf.pkce');
+}
+async function getToken(force){
+  if(!auth) throw mkErr('auth','Nicht mit Dropbox verbunden.');
+  if(!force && auth.access && auth.exp > Date.now() + 60000) return auth.access;
+  var r;
+  try{
+    r = await fetch(TOKEN_URL, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({grant_type:'refresh_token', refresh_token:auth.refresh, client_id:appKey}).toString()});
+  }catch(e){ throw mkErr('net','Keine Verbindung zu Dropbox.'); }
+  if(r.status === 400 || r.status === 401) throw mkErr('auth','Die Dropbox-Anmeldung ist nicht mehr gültig. Bitte neu verbinden.');
+  if(!r.ok) throw mkErr('net','Dropbox antwortet gerade nicht.');
+  var j = await r.json();
+  auth.access = j.access_token; auth.exp = Date.now() + (j.expires_in||3600)*1000;
+  save('pf.auth', auth);
+  return auth.access;
+}
+
+/* ---------- Dropbox-Aufrufe ---------- */
+function headerJson(o){
+  return JSON.stringify(o).replace(/[\u007f-￿]/g, function(c){ return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4); });
+}
+async function call(endpoint, args, content){
+  var forced = false;
+  for(var attempt=0; attempt<5; attempt++){
+    var t = await getToken(forced), r;
+    try{
+      if(content){
+        r = await fetch(CONTENT + endpoint, {method:'POST', headers:{'Authorization':'Bearer '+t, 'Dropbox-API-Arg':headerJson(args)}});
+      }else{
+        r = await fetch(API + endpoint, {method:'POST', headers:{'Authorization':'Bearer '+t, 'Content-Type':'application/json'}, body:JSON.stringify(args)});
+      }
+    }catch(e){ throw mkErr('net','Keine Verbindung zu Dropbox.'); }
+    if(r.status === 401){
+      var txt = ''; try{ txt = await r.text(); }catch(e){}
+      if(txt.indexOf('missing_scope') >= 0) throw mkErr('scope','Der Dropbox-App fehlen Rechte. Unter Permissions files.metadata.read und files.content.read aktivieren, dann abmelden und neu verbinden.');
+      if(!forced){ forced = true; continue; }
+      throw mkErr('auth','Die Dropbox-Anmeldung ist nicht mehr gültig. Bitte neu verbinden.');
+    }
+    if(r.status === 429 || r.status >= 500){
+      var ra = parseInt(r.headers.get('Retry-After') || '3', 10);
+      await sleep(Math.min(isNaN(ra)?3:ra, 30) * 1000); continue;
+    }
+    if(!r.ok){ var t2=''; try{ t2 = await r.text(); }catch(e){} throw mkErr('api', t2 || ('Fehler ' + r.status)); }
+    return content ? r.blob() : r.json();
+  }
+  throw mkErr('net','Dropbox antwortet gerade nicht.');
+}
+async function listFolder(path, recursive){
+  var res = await call('files/list_folder', {path:path, recursive:!!recursive, limit:2000});
+  var all = res.entries;
+  while(res.has_more){
+    res = await call('files/list_folder/continue', {cursor:res.cursor});
+    all = all.concat(res.entries);
+  }
+  return all;
+}
+function normBase(s){
+  s = (s || '').trim().replace(/\/+$/,'');
+  if(!s || s === '/') return '';
+  return s.charAt(0) === '/' ? s : '/' + s;
+}
+
+/* ---------- Einstellungsseite ---------- */
+var FIELDS = {
+  rootFiles:'bool', includeSub:'bool', mode:'str', chunk:'int', folderOrder:'str', within:'str',
+  interval:'int', fit:'str', transition:'str', kenburns:'bool', quality:'str',
+  showClock:'bool', showToday:'bool', showFolder:'bool', showDate:'bool',
+  nightOn:'bool', nightFrom:'str', nightTo:'str', autostart:'bool', refreshHours:'int'
+};
+function fillForm(){
+  $('base').value = cfg.base;
+  Object.keys(FIELDS).forEach(function(k){
+    var el = $(k); if(!el) return;
+    if(FIELDS[k] === 'bool') el.checked = !!cfg[k]; else el.value = String(cfg[k]);
+  });
+  syncForm();
+}
+function readForm(){
+  Object.keys(FIELDS).forEach(function(k){
+    var el = $(k); if(!el) return;
+    if(FIELDS[k] === 'bool') cfg[k] = el.checked;
+    else if(FIELDS[k] === 'int'){ var n = parseInt(el.value,10); cfg[k] = isNaN(n) ? DEFAULTS[k] : n; }
+    else cfg[k] = el.value || DEFAULTS[k];
+  });
+  if(cfg.chunk < 1) cfg.chunk = 1; if(cfg.chunk > 99) cfg.chunk = 99;
+  save('pf.cfg', cfg);
+  syncForm();
+}
+var MODE_HINT = {
+  folder:'Zeigt alle Fotos eines Ordners, dann den nächsten',
+  chunk:'Wechselt reihum zwischen den Ordnern',
+  mix:'Alle Fotos aus allen Ordnern durcheinander'
+};
+function syncForm(){
+  $('modeHint').textContent = MODE_HINT[cfg.mode] || '';
+  $('chunkRow').hidden = cfg.mode !== 'chunk';
+  $('folderOrderRow').hidden = cfg.mode === 'mix';
+  $('withinRow').hidden = cfg.mode === 'mix';
+  $('nightRow').hidden = !cfg.nightOn;
+}
+
+var folderEntries = [];
+async function loadFolderList(){
+  var list = $('folderList');
+  $('folderHint').textContent = 'Werden geladen …';
+  showMsg('settingsMsg','');
+  list.innerHTML = '';
+  try{
+    var entries = await listFolder(cfg.base, false);
+    folderEntries = entries.filter(function(e){ return e['.tag'] === 'folder'; }).sort(byName);
+    var looseCount = entries.filter(function(e){ return e['.tag'] === 'file' && IMG.test(e.name); }).length;
+    var known = {};
+    folderEntries.forEach(function(f){ known[f.path_lower] = true; });
+    var gone = cfg.folders.filter(function(f){ return !known[f.p]; }).length;
+    if(gone){ cfg.folders = cfg.folders.filter(function(f){ return known[f.p]; }); save('pf.cfg', cfg); }
+    if(!folderEntries.length){
+      list.innerHTML = '<div class="empty">Hier gibt es noch keine Unterordner. Lege in Dropbox Ordner mit Fotos an und tippe auf „Laden“.</div>';
+    }
+    var sel = {}; cfg.folders.forEach(function(f){ sel[f.p] = true; });
+    folderEntries.forEach(function(f, i){
+      var lab = document.createElement('label'); lab.className = 'folder';
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = 'fold_' + i; cb.checked = !!sel[f.path_lower];
+      cb.addEventListener('change', updateSelection);
+      var sp = document.createElement('span'); sp.textContent = f.name;
+      lab.appendChild(cb); lab.appendChild(sp); list.appendChild(lab);
+    });
+    $('folderHint').textContent = folderEntries.length + (folderEntries.length === 1 ? ' Ordner' : ' Ordner') +
+      (looseCount ? ' · ' + looseCount + ' lose Fotos im Überordner' : '');
+  }catch(e){
+    if(e.kind === 'auth'){ return goConnect(e.message); }
+    $('folderHint').textContent = 'Konnte nicht geladen werden';
+    var text = e.message;
+    if(e.kind === 'api' && /not_found/.test(text)) text = 'Den Überordner „' + (cfg.base || '/') + '“ gibt es in der Dropbox-App nicht.';
+    showMsg('settingsMsg', text);
+  }
+}
+function updateSelection(){
+  var out = [];
+  folderEntries.forEach(function(f, i){ var cb = $('fold_' + i); if(cb && cb.checked) out.push({p:f.path_lower, n:f.name}); });
+  cfg.folders = out; save('pf.cfg', cfg);
+}
+async function loadAccount(){
+  try{
+    var a = await call('users/get_current_account', null);
+    $('who').textContent = (a.name && a.name.display_name ? a.name.display_name : '') + (a.email ? '\n' + a.email : '');
+  }catch(e){ $('who').textContent = ''; }
+}
+function openSettings(){
+  stopShow();
+  screen('settings');
+  fillForm();
+  loadFolderList();
+  loadAccount();
+}
+
+/* ---------- Verbinden ---------- */
+async function goConnect(msg){
+  stopShow();
+  screen('connect');
+  showMsg('connectMsg', msg || '');
+  var pk = load('pf.pkce', null) || await makePkce();
+  $('manualLink').href = authUrl(pk, false);
+}
+
+/* ---------- Diashow ---------- */
+var groups = null, builtAt = 0, list = [], idx = 0, seq = 0, timer = null, paused = false, pre = null;
+var front = 0, urls = [null, null], fails = 0, nightActive = false, running = false, barTimer = null;
+var ORIG = ['20% 20%','80% 20%','20% 80%','80% 80%','50% 50%','50% 30%'];
+
+function revoke(u){ if(u && u.indexOf('blob:') === 0){ try{ URL.revokeObjectURL(u); }catch(e){} } }
+function setStatus(t){ $('status').textContent = t || ''; $('status').hidden = !t; }
+
+async function loadGroups(){
+  var defs = [];
+  if(cfg.rootFiles) defs.push({name:(cfg.base ? cfg.base.split('/').pop() : 'Überordner'), path:cfg.base, rec:false});
+  cfg.folders.forEach(function(f){ defs.push({name:f.n, path:f.p, rec:cfg.includeSub}); });
+  var out = [];
+  for(var i=0;i<defs.length;i++){
+    var d = defs[i], entries;
+    try{ entries = await listFolder(d.path, d.rec); }
+    catch(e){ if(e.kind === 'api') continue; throw e; }
+    var items = entries.filter(function(e){ return e['.tag'] === 'file' && IMG.test(e.name); })
+      .map(function(e){ return {id:e.id, name:e.name, date:e.client_modified, folder:d.name}; });
+    if(items.length) out.push({name:d.name, items:items});
+  }
+  groups = out; builtAt = Date.now();
+}
+function sortItems(items){
+  var a = items.slice();
+  if(cfg.within === 'shuffle') return shuffle(a);
+  if(cfg.within === 'name') return a.sort(byName);
+  a.sort(function(x,y){ return x.date < y.date ? -1 : x.date > y.date ? 1 : 0; });
+  return cfg.within === 'date-desc' ? a.reverse() : a;
+}
+function combine(){
+  dropPre();
+  var g = groups.map(function(x){ return {name:x.name, items:sortItems(x.items)}; });
+  if(cfg.mode === 'mix'){
+    var all = []; g.forEach(function(x){ all = all.concat(x.items); });
+    list = shuffle(all); return;
+  }
+  if(cfg.folderOrder === 'shuffle') shuffle(g); else g.sort(byName);
+  var out = [];
+  if(cfg.mode === 'folder'){
+    g.forEach(function(x){ out = out.concat(x.items); });
+  }else{
+    var n = Math.max(1, cfg.chunk), pos = g.map(function(){ return 0; }), left = true;
+    while(left){
+      left = false;
+      for(var i=0;i<g.length;i++){
+        if(pos[i] < g[i].items.length){
+          out = out.concat(g[i].items.slice(pos[i], pos[i] + n));
+          pos[i] += n; left = true;
+        }
+      }
+    }
+  }
+  list = out;
+}
+
+async function loadItem(item){
+  var url;
+  try{
+    var blob = await call('files/get_thumbnail_v2', {resource:{'.tag':'path', path:item.id}, format:'jpeg', size:cfg.quality, mode:'bestfit'}, true);
+    url = URL.createObjectURL(blob);
+  }catch(e){
+    if(e.kind !== 'api') throw e;
+    var l = await call('files/get_temporary_link', {path:item.id});
+    url = l.link;
+  }
+  await new Promise(function(res, rej){
+    var im = new Image();
+    im.onload = res; im.onerror = function(){ revoke(url); rej(mkErr('api','Bild defekt')); };
+    im.src = url;
+  });
+  return url;
+}
+function dropPre(){ if(pre){ pre.p.then(revoke, function(){}); pre = null; } }
+function preload(i){
+  if(i >= list.length || (pre && pre.i === i)) return;
+  dropPre();
+  var p = loadItem(list[i]); p.catch(function(){});
+  pre = {i:i, p:p};
+}
+function take(i){
+  if(pre && pre.i === i){ var p = pre.p; pre = null; return p; }
+  dropPre();
+  return loadItem(list[i]);
+}
+
+function fmtMonth(iso){
+  try{ return new Date(iso).toLocaleDateString('de-DE', {month:'long', year:'numeric'}); }catch(e){ return ''; }
+}
+function caption(item){
+  $('capFolder').textContent = cfg.showFolder ? item.folder : '';
+  $('capDate').textContent = cfg.showDate && item.date ? fmtMonth(item.date) : '';
+}
+function paint(url, item){
+  var ni = front ^ 1, L = $('L' + ni), O = $('L' + front);
+  L.className = 'layer fit-' + cfg.fit;
+  var fg = L.querySelector('.fg'), bg = L.querySelector('.bg'), st = L.querySelector('.stage');
+  fg.src = url;
+  if(cfg.fit === 'blur') bg.src = url; else bg.removeAttribute('src');
+  st.className = 'stage'; st.style.animationDuration = '';
+  void st.offsetWidth;
+  if(cfg.kenburns){
+    st.style.transformOrigin = ORIG[Math.floor(Math.random() * ORIG.length)];
+    st.style.animationDuration = (cfg.interval + 3) + 's';
+    st.className = 'stage kb';
+  }
+  var dur = cfg.transition === 'fade' ? 1.6 : 0;
+  L.style.transition = 'opacity ' + dur + 's ease';
+  O.style.transition = 'opacity 0s';
+  L.style.zIndex = 2; O.style.zIndex = 1;
+  L.style.opacity = 1;
+  var oldIdx = front, oldUrl = urls[front];
+  urls[ni] = url; front = ni;
+  setTimeout(function(){
+    if(urls[oldIdx] === oldUrl && front !== oldIdx){
+      O.style.opacity = 0;
+      O.querySelector('.fg').removeAttribute('src');
+      O.querySelector('.bg').removeAttribute('src');
+      urls[oldIdx] = null; revoke(oldUrl);
+    }
+  }, dur * 1000 + 200);
+  caption(item);
+}
+
+async function showAt(i){
+  var my = ++seq;
+  clearTimeout(timer);
+  if(nightActive) return;
+  if(i >= list.length){
+    if(Date.now() - builtAt > cfg.refreshHours * 3600000){
+      try{ await loadGroups(); }catch(e){ if(e.kind === 'auth') return goConnect(e.message); }
+      if(my !== seq) return;
+    }
+    if(!groups.length){ setStatus('In den gewählten Ordnern sind keine Fotos.'); return; }
+    combine(); i = 0;
+  }
+  if(i < 0) i = list.length - 1;
+  idx = i;
+  var url;
+  try{ url = await take(i); }
+  catch(e){
+    if(my !== seq) return;
+    if(e.kind === 'auth') return goConnect(e.message);
+    if(e.kind === 'scope'){ setStatus(e.message); return; }
+    if(e.kind === 'net'){
+      setStatus('Keine Verbindung. Nächster Versuch in 30 Sekunden.');
+      timer = setTimeout(function(){ showAt(i); }, 30000); return;
+    }
+    fails++;
+    if(fails > 25){ setStatus('Die Fotos lassen sich gerade nicht laden.'); return; }
+    return showAt(i + 1);
+  }
+  if(my !== seq){ revoke(url); return; }
+  fails = 0; setStatus('');
+  paint(url, list[i]);
+  preload(i + 1);
+  if(!paused) timer = setTimeout(function(){ showAt(idx + 1); }, cfg.interval * 1000);
+}
+
+async function startShow(){
+  if(!cfg.folders.length && !cfg.rootFiles){
+    openSettings(); showMsg('settingsMsg','Wähle mindestens einen Ordner aus.'); return;
+  }
+  screen('show');
+  running = true; paused = false; setPauseIcon();
+  $('clock').style.display = (cfg.showClock || cfg.showToday) ? '' : 'none';
+  $('time').style.display = cfg.showClock ? '' : 'none';
+  $('today').style.display = cfg.showToday ? '' : 'none';
+  tick();
+  if(nightActive) return;
+  setStatus('Fotos werden gesucht …');
+  var my = ++seq;
+  try{ await loadGroups(); }
+  catch(e){
+    if(e.kind === 'auth') return goConnect(e.message);
+    if(my !== seq) return;
+    setStatus(e.kind === 'net' ? 'Keine Verbindung. Nächster Versuch in 30 Sekunden.' : e.message);
+    timer = setTimeout(function(){ if(running) startShow(); }, 30000);
+    return;
+  }
+  if(my !== seq) return;
+  if(!groups.length){ setStatus('In den gewählten Ordnern sind keine Fotos.'); return; }
+  combine();
+  showAt(0);
+}
+function stopShow(){
+  if(!running) return;
+  running = false; seq++; clearTimeout(timer); dropPre();
+  [0,1].forEach(function(n){
+    var L = $('L' + n); L.style.opacity = 0;
+    L.querySelector('.fg').removeAttribute('src'); L.querySelector('.bg').removeAttribute('src');
+    revoke(urls[n]); urls[n] = null;
+  });
+  $('bar').hidden = true; setStatus('');
+}
+
+/* Uhr und Nachtruhe */
+function mins(s){ var p = (s || '0:0').split(':'); return parseInt(p[0],10) * 60 + parseInt(p[1],10); }
+function inNight(){
+  if(!cfg.nightOn) return false;
+  var d = new Date(), now = d.getHours() * 60 + d.getMinutes(), a = mins(cfg.nightFrom), b = mins(cfg.nightTo);
+  return a < b ? (now >= a && now < b) : (now >= a || now < b);
+}
+function tick(){
+  var d = new Date();
+  $('time').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  try{ $('today').textContent = d.toLocaleDateString('de-DE', {weekday:'long', day:'numeric', month:'long'}); }catch(e){}
+  if(!running) return;
+  var n = inNight();
+  if(n && !nightActive){
+    nightActive = true; seq++; clearTimeout(timer); dropPre(); $('night').hidden = false; $('bar').hidden = true;
+  }else if(!n && nightActive){
+    nightActive = false; $('night').hidden = true;
+    if(groups) showAt(idx + 1); else startShow();
+  }
+}
+setInterval(tick, 15000);
+
+/* Bedienung in der Diashow */
+function setPauseIcon(){ $('iPause').style.display = paused ? 'none' : ''; $('iPlay').style.display = paused ? '' : 'none'; }
+function showBar(){
+  $('bar').hidden = false; $('show').style.cursor = 'default';
+  clearTimeout(barTimer);
+  barTimer = setTimeout(function(){ $('bar').hidden = true; $('show').style.cursor = 'none'; }, 5000);
+}
+$('show').addEventListener('click', function(ev){
+  if(nightActive){ $('night').hidden = !$('night').hidden; return; }
+  var x = ev.clientX / window.innerWidth;
+  if(x < 0.25) showAt(idx - 1);
+  else if(x > 0.75) showAt(idx + 1);
+  else { if($('bar').hidden) showBar(); else $('bar').hidden = true; }
+});
+$('bar').addEventListener('click', function(ev){ ev.stopPropagation(); showBar(); });
+$('bPrev').addEventListener('click', function(){ showAt(idx - 1); });
+$('bNext').addEventListener('click', function(){ showAt(idx + 1); });
+$('bPause').addEventListener('click', function(){
+  paused = !paused; setPauseIcon(); clearTimeout(timer);
+  if(!paused) timer = setTimeout(function(){ showAt(idx + 1); }, 2000);
+});
+$('bSettings').addEventListener('click', function(){ openSettings(); });
+
+/* ---------- Ereignisse der Einstellungsseiten ---------- */
+$('redirectUri').value = REDIRECT;
+$('copyUri').addEventListener('click', function(){
+  var el = $('redirectUri'); el.focus(); el.setSelectionRange(0, el.value.length);
+  var ok = false; try{ ok = document.execCommand('copy'); }catch(e){}
+  this.textContent = ok ? 'Kopiert' : 'Markiert';
+});
+$('saveKey').addEventListener('click', function(){
+  var k = $('appKeyInput').value.trim();
+  if(!/^[a-z0-9]{8,40}$/i.test(k)){ showMsg('setupMsg','Das sieht nicht wie ein App key aus. Er steht bei Dropbox im Reiter Settings unter „App key“.'); return; }
+  appKey = k; save('pf.appkey', k); drop('pf.pkce');
+  goConnect();
+});
+$('connectBtn').addEventListener('click', async function(){
+  var pk = load('pf.pkce', null) || await makePkce();
+  location.href = authUrl(pk, true);
+});
+$('codeBtn').addEventListener('click', async function(){
+  var c = $('codeInput').value.trim();
+  if(!c){ showMsg('connectMsg','Bitte zuerst den Code von Dropbox einfügen.'); return; }
+  try{ await exchange(c, false); openSettings(); }
+  catch(e){ showMsg('connectMsg', e.message); }
+});
+$('changeKey').addEventListener('click', function(){ $('appKeyInput').value = appKey; screen('setup'); });
+$('startBtn').addEventListener('click', function(){ readForm(); updateSelection(); startShow(); });
+$('loadFolders').addEventListener('click', function(){ cfg.base = normBase($('base').value); $('base').value = cfg.base; save('pf.cfg', cfg); loadFolderList(); });
+$('base').addEventListener('keydown', function(e){ if(e.keyCode === 13) $('loadFolders').click(); });
+$('selAll').addEventListener('click', function(){ folderEntries.forEach(function(f,i){ $('fold_'+i).checked = true; }); updateSelection(); });
+$('selNone').addEventListener('click', function(){ folderEntries.forEach(function(f,i){ $('fold_'+i).checked = false; }); updateSelection(); });
+Object.keys(FIELDS).forEach(function(k){ var el = $(k); if(el) el.addEventListener('change', readForm); });
+$('logout').addEventListener('click', async function(){
+  try{ await call('auth/token/revoke', null); }catch(e){}
+  auth = null; drop('pf.auth'); drop('pf.pkce');
+  goConnect();
+});
+
+/* ---------- Start ---------- */
+async function init(){
+  var q = new URLSearchParams(location.search);
+  if(q.get('code') || q.get('error')){
+    try{ history.replaceState(null, '', location.pathname); }catch(e){}
+    if(!appKey){ screen('setup'); return; }
+    if(q.get('error')){ return goConnect('Die Anmeldung wurde abgebrochen.'); }
+    var pk = load('pf.pkce', null);
+    if(!pk || q.get('state') !== pk.s){ drop('pf.pkce'); return goConnect('Die Anmeldung passte nicht zusammen. Bitte noch einmal verbinden.'); }
+    try{ await exchange(q.get('code'), true); }
+    catch(e){ return goConnect(e.message); }
+    return openSettings();
+  }
+  if(!appKey){ screen('setup'); return; }
+  if(!auth){ return goConnect(); }
+  if(cfg.autostart && (cfg.folders.length || cfg.rootFiles)) return startShow();
+  openSettings();
+}
+init();
+})();
+</script>
+</body>
+</html>

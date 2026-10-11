@@ -133,7 +133,7 @@ input.sw:checked:after{transform:translateX(20px);background:var(--accent-ink)}
   <ol class="steps">
    <li>Öffne <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener">dropbox.com/developers/apps</a> und tippe auf <b>Create app</b>. Wähle <b>Scoped access</b>, dann <b>App folder</b>, und gib als Namen z.&nbsp;B. <b>Bilderrahmen</b> ein.</li>
    <li>Im Reiter <b>Permissions</b> die Häkchen bei <code>files.metadata.read</code> und <code>files.content.read</code> setzen und unten auf <b>Submit</b> tippen.</li>
-   <li>Im Reiter <b>Settings</b> unter <b>OAuth 2 → Redirect URIs</b> genau diese Adresse eintragen und auf <b>Add</b> tippen:
+   <li><i>Optional, nur für neuere Geräte:</i> Im Reiter <b>Settings</b> unter <b>OAuth 2 → Redirect URIs</b> diese Adresse eintragen und auf <b>Add</b> tippen:
      <div class="copyrow" style="margin-top:8px"><input type="text" id="redirectUri" readonly><button class="btn small" id="copyUri" type="button">Kopieren</button></div>
      <small class="muted">„Allow public clients“ muss auf <b>Allow</b> stehen (Standard).</small></li>
    <li>Den <b>App key</b> aus dem Reiter Settings hier eintragen:</li>
@@ -152,18 +152,25 @@ input.sw:checked:after{transform:translateX(20px);background:var(--accent-ink)}
   <div class="brand"><h1>Bilderrahmen</h1></div>
   <p class="lead">Melde dich einmal bei Dropbox an. Die Seite bekommt nur Zugriff auf ihren eigenen App-Ordner, nichts wird öffentlich geteilt.</p>
   <div id="connectMsg" class="msg err" hidden></div>
-  <button class="btn primary big" id="connectBtn" type="button">Mit Dropbox verbinden</button>
 
-  <h2>Als App vom Home-Bildschirm</h2>
-  <p class="muted">Wenn du die Seite als Symbol auf dem Home-Bildschirm nutzt, springt die Anmeldung manchmal nicht zurück. Dann so:</p>
+  <h2>Anmeldung mit dem Handy</h2>
+  <p class="muted">Ältere iPads lässt die Dropbox-Webseite nicht mehr zur Anmeldung zu. Melde dich deshalb mit einem anderen Gerät an und übertrage nur den Code hierher.</p>
   <ol class="steps">
-   <li><a id="manualLink" href="#" target="_blank" rel="noopener">Code bei Dropbox holen</a>, anmelden und den angezeigten Code kopieren.</li>
-   <li>Hierher zurückkehren und den Code einfügen:</li>
+   <li>Diesen QR-Code mit der Handy-Kamera scannen und bei Dropbox anmelden.
+     <div id="qr" style="background:#fff;padding:12px;border-radius:8px;display:inline-block;margin:12px 0 4px"></div>
+     <small class="muted" style="display:block">Ohne Kamera: diesen Link an dich selbst schicken und auf dem Handy öffnen.</small>
+     <div class="copyrow" style="margin-top:8px"><input type="text" id="manualUrl" readonly><button class="btn small" id="copyAuth" type="button">Kopieren</button></div></li>
+   <li>Dropbox zeigt danach einen Code an. Diesen hier eintragen (abtippen oder per Notizen/Nachricht übertragen):</li>
   </ol>
   <div class="stack">
    <input type="text" id="codeInput" class="wide" placeholder="Code von Dropbox" autocapitalize="off" autocorrect="off" spellcheck="false">
-   <button class="btn" id="codeBtn" type="button">Code bestätigen</button>
+   <button class="btn primary big" id="codeBtn" type="button">Code bestätigen</button>
   </div>
+  <p class="muted" style="margin-top:12px">Dieser QR-Code gehört genau zu diesem Gerät. Lade die Seite deshalb nicht neu, bevor du den Code eingetragen hast.</p>
+
+  <h2>Auf neueren Geräten</h2>
+  <p class="muted">Hier geht die Anmeldung auch direkt im Browser:</p>
+  <button class="btn" id="connectBtn" type="button">Direkt mit Dropbox verbinden</button>
   <p class="muted" style="margin-top:28px"><button class="linkbtn" id="changeKey" type="button">App key ändern</button></p>
  </div>
 </section>
@@ -260,6 +267,7 @@ input.sw:checked:after{transform:translateX(20px);background:var(--accent-ink)}
  <div id="night" hidden></div>
 </section>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -499,7 +507,12 @@ async function goConnect(msg){
   screen('connect');
   showMsg('connectMsg', msg || '');
   var pk = load('pf.pkce', null) || await makePkce();
-  $('manualLink').href = authUrl(pk, false);
+  var url = authUrl(pk, false);
+  $('manualUrl').value = url;
+  var box = $('qr'); box.innerHTML = '';
+  try{
+    new QRCode(box, {text:url, width:240, height:240, colorDark:'#000000', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.L});
+  }catch(e){ box.style.display = 'none'; }
 }
 
 /* ---------- Diashow ---------- */
@@ -747,6 +760,11 @@ $('bSettings').addEventListener('click', function(){ openSettings(); });
 $('redirectUri').value = REDIRECT;
 $('copyUri').addEventListener('click', function(){
   var el = $('redirectUri'); el.focus(); el.setSelectionRange(0, el.value.length);
+  var ok = false; try{ ok = document.execCommand('copy'); }catch(e){}
+  this.textContent = ok ? 'Kopiert' : 'Markiert';
+});
+$('copyAuth').addEventListener('click', function(){
+  var el = $('manualUrl'); el.focus(); el.setSelectionRange(0, el.value.length);
   var ok = false; try{ ok = document.execCommand('copy'); }catch(e){}
   this.textContent = ok ? 'Kopiert' : 'Markiert';
 });
